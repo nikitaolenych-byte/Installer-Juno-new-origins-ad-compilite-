@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SR2 Craft Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 880px; margin: 32px auto; }
+    label { display:block; margin-top:12px; }
+    textarea { width:100%; height:120px }
+    .row { display:flex; gap:12px; }
+  </style>
+</head>
+<body>
+  <h1>SimpleRockets 2 — Craft generator (demo)</h1>
+  <p>Напиши ім'я крафта і опис, або завантаж повний .craft як шаблон.</p>
+
+  <label>Craft name
+    <input id="craftName" type="text" value="MyCraft" />
+  </label>
+
+  <label>Description (optional)
+    <textarea id="description">High-speed craft</textarea>
+  </label>
+
+  <div class="row">
+    <label>Upload .craft template
+      <input id="craftFile" type="file" accept=".craft" />
+    </label>
+    <button id="uploadBtn">Upload Template</button>
+  </div>
+
+  <div style="margin-top:16px;">
+    <button id="generateBtn">Generate & Download .craft</button>
+    <button id="aiGenerateBtn">AI Generate</button>
+    <button id="aiPreviewBtn">Preview AI</button>
+    <select id="uploadedTemplates"><option value="">— uploaded templates —</option></select>
+  </div>
+
+  <div id="status" style="margin-top:18px;color:#444"></div>
+
+  <!-- Preview modal -->
+  <div id="previewModal" style="display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:#fff; max-width:900px; width:95%; padding:16px; border-radius:8px; max-height:80vh; overflow:auto;">
+      <h3>AI Preview</h3>
+      <div id="previewInfo" style="color:#900; margin-bottom:8px;"></div>
+      <textarea id="previewXml" style="width:100%; height:360px; font-family: monospace;"></textarea>
+      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
+        <button id="previewDownloadBtn">Download</button>
+        <button id="previewApplyBtn">Accept & Download</button>
+        <button id="previewCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

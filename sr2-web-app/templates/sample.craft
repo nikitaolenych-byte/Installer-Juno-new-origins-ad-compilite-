@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sample template for SimpleRockets 2 (.craft). Replace {{NAME}} and {{DESCRIPTION}} -->
+<Craft name="{{NAME}}" parent="template" initialBoundsMin="-1,-1,-1" initialBoundsMax="1,1,1" price="0" xmlVersion="15">
+  <!-- DESCRIPTION: {{DESCRIPTION}} -->
+  <Assembly>
+    <Parts>
+      <Part id="1" partType="CommandDisc1" position="0,0,1" rotation="90,0,0" name="Command Disc" rootPart="true" commandPodId="1" materials="2,2,2,2,2" texture="Default">
+        <Drag drag="0,0,0,0,0,0.005" area="0,0,0,0,0,0.006" />
+        <Config centerOfMass="0,0,0" />
+        <Fuselage bottomScale="0.125,0.1" topScale="0,0" volume="0.0025" version="3" />
+        <FuelTank subPriority="120" />
+        <Gyroscope maxAcceleration="1" utilization="0" />
+        <CommandPod activationGroupNames="Jet Engines,Rocket Engine" activationGroupStates="true,false" craftConfigType="Plane">
+          <Controls />
+        </CommandPod>
+      </Part>
+    </Parts>
+  </Assembly>
+</Craft>
