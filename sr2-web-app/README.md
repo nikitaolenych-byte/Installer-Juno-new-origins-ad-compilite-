@@ -14,6 +14,9 @@ Demo link (local): http://localhost:3000 — open in your browser while the serv
 
 Temporary public demo (tunnel): https://curvy-actors-rhyme.loca.lt — available while the local tunnel session is active.
 
+Password protection:
+- If you want the public tunnel to prompt for a password, set `TUNNEL_PASSWORD` in `sr2-web-app/.env` (copy `.env.example`). The site will show a login page and require the password before granting access.
+
 Troubleshooting downloads:
 - If the browser does not automatically save the .craft file, try the **Preview AI** button and use **Download** from the preview modal (works better on mobile). If that still doesn't start, the preview modal can open the XML in a new tab where you can long-press (mobile) or right-click → Save as (desktop).
 

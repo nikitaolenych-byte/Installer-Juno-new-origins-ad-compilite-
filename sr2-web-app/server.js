@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 const OpenAI = require('openai');
 const { XMLValidator } = require('fast-xml-parser');
 
@@ -11,15 +12,48 @@ if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
+// Read tunnel password from env (optional). If set, site will require this password to access.
+const TUNNEL_PASSWORD = process.env.TUNNEL_PASSWORD || null;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// If TUNNEL_PASSWORD is set, use simple password-gate middleware
+app.use((req, res, next) => {
+  // allow public assets and auth routes
+  if (!TUNNEL_PASSWORD) return next();
+  const publicPaths = ['/login', '/login.css', '/login.js', '/logout', '/health'];
+  if (publicPaths.includes(req.path) || req.path.startsWith('/public/') || req.path.startsWith('/uploads') || req.path.startsWith('/templates')) return next();
+  if (req.cookies && req.cookies.sr2_auth === '1') return next();
+  // show login page if not authenticated
+  if (req.method === 'GET') return res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  return res.status(401).json({ error: 'authentication required' });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Multer setup for uploads
 const upload = multer({ dest: path.join(__dirname, 'uploads') });
+
+// Login and auth routes
+app.post('/login', (req, res) => {
+  const { password } = req.body;
+  if (!TUNNEL_PASSWORD) return res.status(400).json({ error: 'Password auth not configured' });
+  if (password === TUNNEL_PASSWORD) {
+    res.cookie('sr2_auth', '1', { httpOnly: true, sameSite: 'lax' });
+    return res.json({ ok: true });
+  }
+  return res.status(403).json({ error: 'Invalid password' });
+});
+
+app.get('/logout', (req, res) => {
+  res.clearCookie('sr2_auth');
+  res.redirect('/');
+});
 
 // Upload endpoint: accept a .craft template file
 app.post('/upload', upload.single('craftFile'), (req, res) => {
