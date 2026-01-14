@@ -210,6 +210,49 @@ app.get('/history', (req, res) => {
   res.json({ history: aiHistory });
 });
 
+// Run simple tests on a .craft XML: check for FuelTanks, Gyroscope, centerOfMass, fuelLine
+app.post('/ai-test', (req, res) => {
+  const { xml } = req.body;
+  if (!xml) return res.status(400).json({ error: 'No XML provided' });
+  try {
+    // Try to parse XML
+    const parser = require('fast-xml-parser');
+    const parsed = parser.parse(xml, { ignoreAttributes:false, attributeNamePrefix: '' });
+    if (!parsed || !parsed.Craft) return res.status(400).json({ error: 'Invalid Craft XML' });
+    const assembly = parsed.Craft.Assembly || parsed.Craft.assembly || {};
+    const parts = assembly.Parts && assembly.Parts.Part ? assembly.Parts.Part : [];
+    const partsArray = Array.isArray(parts) ? parts : [parts];
+
+    const warnings = [];
+    const errors = [];
+
+    // check fuel tanks
+    const fuelTanks = partsArray.filter(p => {
+      return p.FuelTank || (p.FuelTank === '') || (p['FuelTank'] !== undefined);
+    });
+    if (fuelTanks.length === 0) warnings.push('No FuelTank parts found — craft may have no fuel.');
+
+    // check gyroscope
+    const gyros = partsArray.filter(p => p.Gyroscope || p.Gyroscope !== undefined);
+    if (gyros.length === 0) warnings.push('No Gyroscope found — craft may be unstable during flight.');
+
+    // center of mass checks (search for Config centerOfMass)
+    const comParts = partsArray.filter(p => p.Config && p.Config.centerOfMass);
+    if (comParts.length === 0) warnings.push('No centerOfMass entries found in parts; verify CoM position in craft.');
+
+    // fuelLine checks
+    const fuelLineParts = partsArray.filter(p => p.Config && p.Config.fuelLine === 'true');
+    if (fuelLineParts.length === 0) warnings.push('No fuelLine=true parts detected — check fuel routing.');
+
+    // Basic pass criteria: no errors, and at least one fuel tank
+    const ok = errors.length === 0;
+    addHistoryEntry({ role: 'system', type: 'test', text: `Test run: ${warnings.length} warnings, ${errors.length} errors` });
+    return res.json({ ok, warnings, errors });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to parse XML', details: e.message });
+  }
+});
+
 // Endpoint to fetch server logs (tail)
 app.get('/server-logs', (req, res) => {
   const logPath = '/tmp/sr2-server.log';

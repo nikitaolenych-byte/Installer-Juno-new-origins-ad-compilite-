@@ -94,9 +94,11 @@ const aiPreviewBtn = await $('aiPreviewBtn');
 const previewModal = await $('previewModal');
 const previewXml = await $('previewXml');
 const previewInfo = await $('previewInfo');
+const previewRunTestsBtn = await $('previewRunTestsBtn');
 const previewDownloadBtn = await $('previewDownloadBtn');
 const previewApplyBtn = await $('previewApplyBtn');
 const previewCloseBtn = await $('previewCloseBtn');
+const previewTestResults = await $('previewTestResults');
 
 aiPreviewBtn.addEventListener('click', async ()=>{
   const name = craftName.value || 'AICraft';
@@ -141,6 +143,24 @@ previewDownloadBtn.addEventListener('click', ()=>{
   finally { a.remove(); setTimeout(()=>URL.revokeObjectURL(url),15000); }
 });
 
+previewRunTestsBtn.addEventListener('click', async ()=>{
+  const content = previewXml.value || '';
+  if (!content){ setStatus('Nothing to test', false); return; }
+  setStatus('Running tests...', true, true);
+  previewTestResults.textContent = '';
+  try{
+    const res = await fetch('/ai-test', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ xml: content }) });
+    const data = await res.json();
+    if (!res.ok){ setStatus('Test failed: ' + (data?.error||res.statusText), false, false); previewTestResults.textContent = 'Error: ' + (data?.error||res.statusText); return; }
+    // show results
+    previewTestResults.innerHTML = '';
+    if (data.errors && data.errors.length) previewTestResults.innerHTML += `<div style="color:#b00">Errors: ${escapeHtml(JSON.stringify(data.errors))}</div>`;
+    if (data.warnings && data.warnings.length) previewTestResults.innerHTML += `<div style="color:#e68a00">Warnings: ${escapeHtml(JSON.stringify(data.warnings))}</div>`;
+    if (data.ok) previewTestResults.innerHTML += `<div style="color:#080">All checks passed ✅</div>`;
+    setStatus('Tests completed', true, false);
+  }catch(e){ setStatus('Test failed', false, false); previewTestResults.textContent = 'Test error: ' + (e.message||e); }
+});
+
 previewApplyBtn.addEventListener('click', ()=>{
   // Accept and download
   previewDownloadBtn.click();
@@ -166,6 +186,9 @@ const modelInput = await $('modelInput');
 const autoSpeakToggle = await $('autoSpeak');
 const fullscreenBtn = await $('fullscreenBtn');
 const chatPanel = await $('chatPanel');
+const presetQuick = await $('presetQuick');
+const presetDetailed = await $('presetDetailed');
+const presetTest = await $('presetTest');
 
 fullscreenBtn.addEventListener('click', ()=>{
   if (chatPanel.classList.contains('chat-fullscreen')){
@@ -219,6 +242,9 @@ chatSend.addEventListener('click', async ()=>{
   // prevent double send by disabling
   chatSend.disabled = true; chatInput.disabled = true; setStatus('Sending...', true, true);
 
+  // Add preset to history if a preset was used (we push the text as user)
+  // Implementation continues below
+
   const action = chatAction.value || 'preview';
   // push user bubble
   renderChatMessage('user', text);
@@ -262,6 +288,11 @@ chatSend.addEventListener('click', async ()=>{
 
 // send on Enter
 chatInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); chatSend.click(); } });
+
+// Preset button handlers
+presetQuick.addEventListener('click', ()=>{ chatInput.value = "Створи компактну швидку ракету для атмосфери: максимальна швидкість ~Mach 2.5, головний двигун на LOX/CH4, прості шасі, зроби її стійкою і маленькою."; chatInput.focus(); });
+presetDetailed.addEventListener('click', ()=>{ chatInput.value = `Мета: "гіперзвуковий літак для тестів". Параметри: макс Mach 3, діапазон 600 км, тип LOX/CH4, має колесні шасі. Обмеження: ширина < 6 м. Вивід: тільки .craft XML. Ім'я: HypersonicTest.`; chatInput.focus(); });
+presetTest.addEventListener('click', ()=>{ chatInput.value = `Опиши: "ракета-переносник, вивантаження вантажу". Прості правила: - додай gyroscope; - перевір CoM; - fuelType=LOX/CH4. Поверни тільки валідний .craft XML.`; chatInput.focus(); });
 
 function renderHistoryItem(item){
   const div = document.createElement('div');

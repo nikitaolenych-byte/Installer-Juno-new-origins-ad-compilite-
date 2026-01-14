@@ -45,13 +45,20 @@
         <button id="uploadBtn" class="btn">Upload Template</button>
       </div>
 
-      <div style="margin-top:12px;" class="controls">
+        <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
         <button id="generateBtn" class="btn primary">Generate & Download .craft</button>
         <button id="aiGenerateBtn" class="btn">AI Generate</button>
         <button id="aiPreviewBtn" class="btn">Preview AI</button>
         <select id="uploadedTemplates"><option value="">— uploaded templates —</option></select>
       </div>
-      <div class="note">If download doesn't start on mobile, use Preview AI and choose <strong>Download</strong> from the preview modal (works better on mobile). If that still doesn't start, the preview modal can open the XML in a new tab where you can long-press (mobile) or right-click → Save as (desktop).</div>
+      <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+        <div style="display:flex; gap:8px;">
+          <button id="presetQuick" class="btn">Quick</button>
+          <button id="presetDetailed" class="btn">Detailed</button>
+          <button id="presetTest" class="btn">With Tests</button>
+        </div>
+        <div class="note">If download doesn't start on mobile, use Preview AI and choose <strong>Download</strong> from the preview modal (works better on mobile). If that still doesn't start, the preview modal can open the XML in a new tab where you can long-press (mobile) or right-click → Save as (desktop).</div>
+      </div>
     </div>
 
     <!-- Chat column -->
@@ -93,11 +100,13 @@
       <h3>AI Preview</h3>
       <div id="previewInfo" style="color:#900; margin-bottom:8px;"></div>
       <textarea id="previewXml" style="width:100%; height:360px; font-family: monospace;"></textarea>
-      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
+      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+        <button id="previewRunTestsBtn" class="btn">Run Tests</button>
         <button id="previewDownloadBtn" class="btn">Download</button>
         <button id="previewApplyBtn" class="btn primary">Accept & Download</button>
         <button id="previewCloseBtn" class="btn ghost">Close</button>
       </div>
+      <div id="previewTestResults" style="margin-top:8px; font-size:0.9em; color:#333"></div>
     </div>
   </div>
 
