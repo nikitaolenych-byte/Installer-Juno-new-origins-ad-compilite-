@@ -205,6 +205,36 @@ app.post('/ai-preview', async (req, res) => {
   }
 });
 
+// Run tests on provided craft XML (basic checks)
+app.post('/run-tests', (req, res) => {
+  const { xml } = req.body;
+  if (!xml) return res.status(400).json({ error: 'No XML provided' });
+  try {
+    // quick string checks and xml parse
+    const results = [];
+    // 1) Has CommandPod
+    if (/\<CommandPod\b/i.test(xml)) results.push({ name: 'CommandPod present', ok: true });
+    else results.push({ name: 'CommandPod present', ok: false, details: 'No <CommandPod> element found' });
+    // 2) Has at least one FuelTank
+    if (/\<FuelTank\b/i.test(xml)) results.push({ name: 'FuelTank present', ok: true });
+    else results.push({ name: 'FuelTank present', ok: false, details: 'No <FuelTank> element found' });
+    // 3) Has Gyroscope
+    if (/\<Gyroscope\b/i.test(xml)) results.push({ name: 'Gyroscope present', ok: true });
+    else results.push({ name: 'Gyroscope present', ok: false, details: 'No <Gyroscope> element found; consider adding for stability' });
+
+    // 4) centerOfMass existence (search in Config attributes)
+    if (/centerOfMass=\"[\d\-\.eE, ]+\"/i.test(xml)) results.push({ name: 'CenterOfMass set', ok: true });
+    else results.push({ name: 'CenterOfMass set', ok: false, details: 'No centerOfMass attribute found in any <Config>' });
+
+    // 5) basic parse to ensure XML is well-formed
+    const parseOk = XMLValidator.validate(xml);
+    if (parseOk === true) results.push({ name: 'Well-formed XML', ok: true });
+    else results.push({ name: 'Well-formed XML', ok: false, details: parseOk });
+
+    return res.json({ results, summary: results.every(r=>r.ok) });
+  } catch (e){ return res.status(500).json({ error: 'Test execution failed', details: e.message }); }
+});
+
 // Endpoint to fetch in-memory AI history
 app.get('/history', (req, res) => {
   res.json({ history: aiHistory });

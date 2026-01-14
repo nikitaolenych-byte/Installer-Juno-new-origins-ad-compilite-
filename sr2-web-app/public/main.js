@@ -289,6 +289,56 @@ chatSend.addEventListener('click', async ()=>{
 // send on Enter
 chatInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); chatSend.click(); } });
 
+// Presets implementation
+const presetSelect = await $('presetSelect');
+const insertPresetBtn = await $('insertPresetBtn');
+const addPresetBtn = await $('addPresetBtn');
+
+const PRESETS = {
+  quick: "Створи компактну швидку ракету для атмосфери: максимальна швидкість ~Mach 2.5, головний двигун LOX/CH4, прості шасі, стійка і маленька.",
+  detailed: "Мета: 'гіперзвуковий літак для тестів'. Параметри: макс Mach 3, діапазон 600 км, тип LOX/CH4, має колесні шасі. Обмеження: ширина < 6 м. Вивід: тільки .craft XML. Ім'я: HypersonicTest.",
+  validation: "Опиши: 'ракета-переносник, вивантаження вантажу'. Просьба: - збалансуй центр масу, - додай gyroscope і PID для стійкості, - fuelType=LOX/CH4. Поверни тільки валідний .craft XML. Перевір: має бути <Craft>... </Craft>."
+};
+
+insertPresetBtn.addEventListener('click', ()=>{
+  const k = presetSelect.value;
+  chatInput.value = PRESETS[k] || '';
+  chatInput.focus();
+});
+
+addPresetBtn.addEventListener('click', ()=>{
+  const custom = prompt('Save current input as preset name:');
+  if (!custom) return;
+  const key = custom.toLowerCase().replace(/[^a-z0-9_\-]/g,'_');
+  PRESETS[key] = chatInput.value || '';
+  const opt = document.createElement('option'); opt.value = key; opt.textContent = custom; presetSelect.appendChild(opt);
+  setStatus('Custom preset saved: ' + custom, true);
+});
+
+// Preview Run Tests handler
+const previewRunTestsBtn = await $('previewRunTestsBtn');
+const previewTestResults = await $('previewTestResults');
+previewRunTestsBtn.addEventListener('click', async ()=>{
+  const xml = previewXml.value || '';
+  if (!xml) { setStatus('Nothing to test', false); return; }
+  setStatus('Running tests...', true, true);
+  try{
+    const res = await fetch('/run-tests', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ xml }) });
+    const data = await res.json();
+    if (!res.ok){ throw new Error(data.error || 'Test failed'); }
+    // render results
+    previewTestResults.innerHTML = '';
+    data.results.forEach(r => {
+      const div = document.createElement('div');
+      div.style.marginBottom = '6px';
+      div.innerHTML = `<strong>${escapeHtml(r.name)}</strong>: ${r.ok? '<span style="color:#080">OK</span>':'<span style="color:#b00">FAIL</span>'} ${r.details?'<div style="font-size:0.9em;color:#555">'+escapeHtml(r.details)+'</div>':''}`;
+      previewTestResults.appendChild(div);
+    });
+    setStatus('Tests completed', true, false);
+  }catch(e){ setStatus('Tests failed: ' + (e.message||e), false, false); previewTestResults.textContent = 'Error: ' + (e.message||e); }
+});
+
+
 // Preset button handlers
 presetQuick.addEventListener('click', ()=>{ chatInput.value = "Створи компактну швидку ракету для атмосфери: максимальна швидкість ~Mach 2.5, головний двигун на LOX/CH4, прості шасі, зроби її стійкою і маленькою."; chatInput.focus(); });
 presetDetailed.addEventListener('click', ()=>{ chatInput.value = `Мета: "гіперзвуковий літак для тестів". Параметри: макс Mach 3, діапазон 600 км, тип LOX/CH4, має колесні шасі. Обмеження: ширина < 6 м. Вивід: тільки .craft XML. Ім'я: HypersonicTest.`; chatInput.focus(); });

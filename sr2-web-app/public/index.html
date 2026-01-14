@@ -87,6 +87,17 @@
           <input id="chatInput" placeholder="Опишіть, який крафт ви хочете (наприклад: 'швидка ракета з великою ємністю палива')" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd;" />
           <button id="chatSend" class="btn primary">Send</button>
         </div>
+
+        <!-- Presets -->
+        <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+          <select id="presetSelect" style="padding:6px;">
+            <option value="quick">Quick: compact fast rocket</option>
+            <option value="detailed">Detailed: full param template</option>
+            <option value="validation">Validation: include CoM & tests</option>
+          </select>
+          <button id="insertPresetBtn" class="btn">Insert Preset</button>
+          <button id="addPresetBtn" class="btn ghost">Save Custom</button>
+        </div>
       </div>
       <div class="note" style="margin-top:8px">Натисніть <strong>Send</strong>, щоб отримати відповідь від AI. Можна використовувати Preview щоб переглядати XML перед скачуванням.</div>
     </div>
