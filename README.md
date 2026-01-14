@@ -4,6 +4,8 @@ This repository contains a small demo web application: **SR2 Craft Generator** (
 
 Demo (local): http://localhost:3000 — run the demo by following the instructions in `sr2-web-app/README.md`:
 
+Temporary public demo (tunnel): https://sr2craftgen-unik.loca.lt — available while the local tunnel session is active.
+
 Quick start:
 
 1. cd sr2-web-app
