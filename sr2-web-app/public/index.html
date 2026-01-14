@@ -4,36 +4,74 @@
   <meta charset="utf-8" />
   <title>SR2 Craft Generator</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 880px; margin: 32px auto; }
+    body { font-family: Arial, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; color: #222; }
     label { display:block; margin-top:12px; }
     textarea { width:100%; height:120px }
     .row { display:flex; gap:12px; }
+    .controls { display:flex; gap:8px; align-items:center; }
+    .btn { padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#f6f6f6; cursor:pointer; }
+    .btn.primary { background:#007bff; color:#fff; border-color:#007bff; }
+    .btn.ghost { background:transparent; }
+    .btn[disabled] { opacity:0.6; cursor:not-allowed; }
+    #status { margin-top:12px; }
+    #previewModal textarea { height: 48vh; }
+    .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(0,0,0,0.12); border-top-color:#007bff; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-left:8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .note { font-size:0.9em; color:#666; }
   </style>
 </head>
 <body>
-  <h1>SimpleRockets 2 — Craft generator (demo)</h1>
-  <p>Напиши ім'я крафта і опис, або завантаж повний .craft як шаблон.</p>
+  <div style="display:flex; gap:18px; align-items:flex-start;">
+    <div style="flex:1; min-width:280px">
+      <h1 style="margin:0 0 8px 0">SR2 Craft Generator — demo</h1>
+      <p class="note">Напиши ім'я крафта і опис, або завантаж повний .craft як шаблон.</p>
 
-  <label>Craft name
-    <input id="craftName" type="text" value="MyCraft" />
-  </label>
+      <label>Craft name
+        <input id="craftName" type="text" value="MyCraft" />
+      </label>
 
-  <label>Description (optional)
-    <textarea id="description">High-speed craft</textarea>
-  </label>
+      <label>Description (optional)
+        <textarea id="description">High-speed craft</textarea>
+      </label>
 
-  <div class="row">
-    <label>Upload .craft template
-      <input id="craftFile" type="file" accept=".craft" />
-    </label>
-    <button id="uploadBtn">Upload Template</button>
-  </div>
+      <div class="row">
+        <label>Upload .craft template
+          <input id="craftFile" type="file" accept=".craft" />
+        </label>
+        <button id="uploadBtn" class="btn">Upload Template</button>
+      </div>
 
-  <div style="margin-top:16px;">
-    <button id="generateBtn">Generate & Download .craft</button>
-    <button id="aiGenerateBtn">AI Generate</button>
-    <button id="aiPreviewBtn">Preview AI</button>
-    <select id="uploadedTemplates"><option value="">— uploaded templates —</option></select>
+      <div style="margin-top:12px;" class="controls">
+        <button id="generateBtn" class="btn primary">Generate & Download .craft</button>
+        <button id="aiGenerateBtn" class="btn">AI Generate</button>
+        <button id="aiPreviewBtn" class="btn">Preview AI</button>
+        <select id="uploadedTemplates"><option value="">— uploaded templates —</option></select>
+      </div>
+      <div class="note">If download doesn't start on mobile, use Preview AI and choose <strong>Download</strong> from the preview modal (works better on mobile). If that still doesn't start, the preview modal can open the XML in a new tab where you can long-press (mobile) or right-click → Save as (desktop).</div>
+    </div>
+
+    <!-- Chat column -->
+    <div style="width:420px; max-width:44%;">
+      <div style="border:1px solid #e6e6e6; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; height:560px;">
+        <div style="background:#0b5cff; color:#fff; padding:12px; display:flex; align-items:center; gap:12px;">
+          <div style="width:36px; height:36px; background:#083ea3; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700;">CG</div>
+          <div>
+            <div style="font-weight:700">CraftGen Chat</div>
+            <div style="font-size:0.85em; opacity:0.9">AI assistant for SimpleRockets 2</div>
+          </div>
+        </div>
+        <div id="chatArea" style="flex:1; padding:12px; overflow:auto; background:#fafafa;"></div>
+        <div style="padding:10px; border-top:1px solid #eee; display:flex; gap:8px; align-items:center;">
+          <select id="chatAction" style="padding:8px;">
+            <option value="preview">Preview (recommended)</option>
+            <option value="generate">Generate & Download</option>
+          </select>
+          <input id="chatInput" placeholder="Опишіть, який крафт ви хочете (наприклад: 'швидка ракета з великою ємністю палива')" style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+          <button id="chatSend" class="btn primary">Send</button>
+        </div>
+      </div>
+      <div class="note" style="margin-top:8px">Натисніть <strong>Send</strong>, щоб отримати відповідь від AI. Можна використовувати Preview щоб переглядати XML перед скачуванням.</div>
+    </div>
   </div>
 
   <div id="status" style="margin-top:18px;color:#444"></div>
@@ -45,11 +83,25 @@
       <div id="previewInfo" style="color:#900; margin-bottom:8px;"></div>
       <textarea id="previewXml" style="width:100%; height:360px; font-family: monospace;"></textarea>
       <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
-        <button id="previewDownloadBtn">Download</button>
-        <button id="previewApplyBtn">Accept & Download</button>
-        <button id="previewCloseBtn">Close</button>
+        <button id="previewDownloadBtn" class="btn">Download</button>
+        <button id="previewApplyBtn" class="btn primary">Accept & Download</button>
+        <button id="previewCloseBtn" class="btn ghost">Close</button>
       </div>
     </div>
+  </div>
+
+  <!-- Logs / Chat panel -->
+  <div id="bottomPanel" style="position:fixed; right:24px; left:24px; bottom:24px; max-height:40vh; background:#fff; border:1px solid #e6e6e6; border-radius:8px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #eee; background:#fafafa;">
+      <div style="font-weight:600">Activity</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="toggleHistoryBtn" class="btn">History</button>
+        <button id="toggleLogsBtn" class="btn">Server Logs</button>
+        <button id="closePanelBtn" class="btn ghost">Close</button>
+      </div>
+    </div>
+    <div id="historyArea" style="padding:12px; overflow:auto; height: calc(40vh - 50px); background:#fff;"></div>
+    <div id="logsArea" style="display:none; padding:12px; overflow:auto; height: calc(40vh - 50px); background:#111; color:#0f0; font-family:monospace; font-size:12px;"></div>
   </div>
 
   <script src="main.js"></script>
