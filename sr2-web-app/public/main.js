@@ -80,7 +80,7 @@ aiGenerateBtn.addEventListener('click', async ()=>{
   try {
     const res = await fetch('/ai-generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc, templateFilename })
+      body: JSON.stringify({ name, description: desc, templateFilename, model: modelInput.value || undefined })
     });
     await handleDownloadResponse(res, name);
     setStatus('AI-generated craft downloaded ✅', true, false);
@@ -110,7 +110,7 @@ aiPreviewBtn.addEventListener('click', async ()=>{
   try {
     const res = await fetch('/ai-preview', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: desc, templateFilename })
+      body: JSON.stringify({ name, description: desc, templateFilename, model: modelInput.value || undefined })
     });
     if (!res.ok){ const err = await res.json().catch(()=>null); throw new Error((err&&err.error)||res.statusText); }
     const data = await res.json();
@@ -162,6 +162,35 @@ const chatArea = await $('chatArea');
 const chatInput = await $('chatInput');
 const chatSend = await $('chatSend');
 const chatAction = await $('chatAction');
+const modelInput = await $('modelInput');
+const autoSpeakToggle = await $('autoSpeak');
+const fullscreenBtn = await $('fullscreenBtn');
+const chatPanel = await $('chatPanel');
+
+fullscreenBtn.addEventListener('click', ()=>{
+  if (chatPanel.classList.contains('chat-fullscreen')){
+    chatPanel.classList.remove('chat-fullscreen');
+    fullscreenBtn.textContent = 'Fullscreen';
+  } else {
+    chatPanel.classList.add('chat-fullscreen');
+    fullscreenBtn.textContent = 'Exit';
+  }
+});
+
+// Text-to-speech helper
+function speakText(text){
+  try{
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g,''));
+    // prefer Ukrainian or English if available
+    const voices = window.speechSynthesis.getVoices();
+    let voice = voices.find(v => v.lang && v.lang.startsWith('uk')) || voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
+    if (voice) utter.voice = voice;
+    utter.rate = 1.0; utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  }catch(e){ console.warn('TTS failed', e); }
+}
 
 function renderChatMessage(who, text){
   const wrapper = document.createElement('div');
@@ -171,7 +200,10 @@ function renderChatMessage(who, text){
     wrapper.innerHTML = `<div style="display:inline-block; background:#007bff; color:#fff; padding:10px 12px; border-radius:12px; max-width:86%">${escapeHtml(text)}</div>`;
   } else if (who === 'ai'){
     wrapper.style.textAlign='left';
-    wrapper.innerHTML = `<div style="display:inline-block; background:#fff; border:1px solid #e6e6e6; padding:10px 12px; border-radius:12px; max-width:86%"><pre style="white-space:pre-wrap;font-family:monospace;margin:0">${escapeHtml(text)}</pre></div>`;
+    const id = 'ai-msg-'+Date.now()+Math.random().toString(36).slice(2,7);
+    wrapper.innerHTML = `<div style="display:inline-block; background:#fff; border:1px solid #e6e6e6; padding:10px 12px; border-radius:12px; max-width:86%"><pre id="${id}" style="white-space:pre-wrap;font-family:monospace;margin:0">${escapeHtml(text)}</pre><div style="margin-top:6px; text-align:right"><button class="btn" data-speak-target="${id}">🔊 Speak</button></div></div>`;
+    // attach speak handler
+    setTimeout(()=>{ const btn = wrapper.querySelector('button[data-speak-target]'); if (btn){ btn.addEventListener('click', ()=>{ const t = document.getElementById(btn.getAttribute('data-speak-target')).innerText; speakText(t); }); if (autoSpeakToggle.checked) { const t = document.getElementById(btn.getAttribute('data-speak-target')).innerText; speakText(t); } } }, 20);
   } else if (who === 'error'){
     wrapper.style.textAlign='left';
     wrapper.innerHTML = `<div style="display:inline-block; background:#fee; border:1px solid #f5c6cb; padding:10px 12px; border-radius:12px; max-width:86%; color:#b00">${escapeHtml(text)}</div>`;
@@ -196,7 +228,7 @@ chatSend.addEventListener('click', async ()=>{
   if (action === 'preview'){
     setStatus('AI preview generating...', true, true);
     try{
-      const res = await fetch('/ai-preview', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: craftName.value || 'AICraft', description: text, templateFilename: uploadedSelect.value || undefined }) });
+      const res = await fetch('/ai-preview', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: craftName.value || 'AICraft', description: text, templateFilename: uploadedSelect.value || undefined, model: modelInput.value || undefined }) });
       if (!res.ok){ const err = await res.json().catch(()=>null); throw new Error((err&&err.error)||res.statusText); }
       const data = await res.json();
       if (data.xml) renderChatMessage('ai', data.xml);
@@ -208,7 +240,7 @@ chatSend.addEventListener('click', async ()=>{
   } else if (action === 'generate'){
     setStatus('AI generating craft...', true, true);
     try{
-      const res = await fetch('/ai-generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: craftName.value || 'AICraft', description: text, templateFilename: uploadedSelect.value || undefined }) });
+      const res = await fetch('/ai-generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: craftName.value || 'AICraft', description: text, templateFilename: uploadedSelect.value || undefined, model: modelInput.value || undefined }) });
       if (!res.ok){ const err = await res.json().catch(()=>null); throw new Error((err&&err.error)||res.statusText); }
       const blob = await res.blob();
       const textResp = await blob.text();

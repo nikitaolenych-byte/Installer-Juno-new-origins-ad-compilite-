@@ -28,6 +28,7 @@ OpenAI integration (AI generation)
 
 CraftGen Chat:
 - The UI now includes a chat-style assistant called **CraftGen Chat** (right column). Write a simple prompt and press **Send**. Choose **Preview** (recommended) to see AI XML output, or **Generate & Download** to create and download a .craft directly from the chat. Chat history and server logs are visible in the Activity panel (Ctrl+J).
+- New features: **Fullscreen** chat (click Fullscreen in header), **Auto Speak** toggle to have AI responses read aloud using your browser's TTS, and a **Model** input to request a specific model (for example, `gpt-5.2`) — note: the server will pass the model name through to the OpenAI API, and the model will work only if your API account supports it. Be careful to keep your `OPENAI_API_KEY` secret and note that unsupported model names will produce API errors.
 
 Preview feature:
 - Use the 'Preview AI' button in the UI to see the AI-generated `.craft` XML before downloading. The preview shows validation status and allows editing the XML before downloading.

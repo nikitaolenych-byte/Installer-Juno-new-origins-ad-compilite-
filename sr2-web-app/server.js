@@ -5,7 +5,11 @@ const path = require('path');
 const OpenAI = require('openai');
 const { XMLValidator } = require('fast-xml-parser');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize OpenAI client only if API key is present to allow running without AI key
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -93,8 +97,9 @@ app.post('/ai-generate', async (req, res) => {
   const userPrompt = `User description: "${description}"\n\nTemplate XML (do not output the template again unchanged unless you modify it):\n${templateData}\n\nModify the template so that the craft matches the user description where reasonable. Replace placeholders {{NAME}} and {{DESCRIPTION}} with the provided name and description. Output only the full XML document (a single valid .craft XML) and nothing else.`;
 
   try {
+    const modelToUse = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: modelToUse,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: userPrompt }
@@ -127,10 +132,20 @@ app.post('/ai-generate', async (req, res) => {
   }
 });
 
+// In-memory AI history (for UI logs) - small circular buffer
+const AI_HISTORY_LIMIT = 200;
+const aiHistory = [];
+function addHistoryEntry(entry){
+  // entry: { role: 'user'|'ai'|'system'|'error', type: 'preview'|'generate', text, time }
+  aiHistory.push(Object.assign({ time: new Date().toISOString() }, entry));
+  if (aiHistory.length > AI_HISTORY_LIMIT) aiHistory.shift();
+}
+
 // AI preview: return XML and validation info without forcing a download
 app.post('/ai-preview', async (req, res) => {
   const { description = '', templateFilename, name = 'AI_Craft' } = req.body;
-  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'OpenAI API key not configured. Set OPENAI_API_KEY.' });
+  addHistoryEntry({ role: 'user', type: 'preview', text: description });
+
   const templatesDir = path.join(__dirname, 'uploads');
   const defaultTemplate = path.join(__dirname, 'templates', 'sample.craft');
   const readTemplate = (p) => fs.readFileSync(p, 'utf8');
@@ -145,6 +160,7 @@ app.post('/ai-preview', async (req, res) => {
       templateData = readTemplate(defaultTemplate);
     }
   } catch (e) {
+    addHistoryEntry({ role: 'error', type: 'preview', text: 'Failed to read template: ' + e.message });
     return res.status(500).json({ error: 'Failed to read template', details: e.message });
   }
 
@@ -153,8 +169,10 @@ app.post('/ai-preview', async (req, res) => {
   const userPrompt = `User description: "${description}"\n\nTemplate XML (do not output the template again unchanged unless you modify it):\n${templateData}\n\nModify the template so that the craft matches the user description where reasonable. Replace placeholders {{NAME}} and {{DESCRIPTION}} with the provided name and description. Output only the full XML document (a single valid .craft XML) and nothing else.`;
 
   try {
+    if (!openai) return res.status(500).json({ error: 'OpenAI API key not configured. Set OPENAI_API_KEY.' });
+    const modelToUse = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: modelToUse,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: userPrompt }
@@ -164,24 +182,48 @@ app.post('/ai-preview', async (req, res) => {
     });
 
     const aiText = completion.choices?.[0]?.message?.content;
-    if (!aiText) return res.status(500).json({ error: 'Empty response from AI' });
+    if (!aiText) { addHistoryEntry({ role: 'error', type: 'preview', text: 'Empty response from AI' }); return res.status(500).json({ error: 'Empty response from AI' }); }
 
     const xmlMatch = aiText.match(/(<\?xml[\s\S]*?\?>)?[\s\S]*?<Craft[\s\S]*?<\/Craft>/i);
-    if (!xmlMatch) return res.status(500).json({ error: 'AI did not return a Craft XML document' });
+    if (!xmlMatch) { addHistoryEntry({ role: 'error', type: 'preview', text: 'AI did not return Craft XML' }); return res.status(500).json({ error: 'AI did not return a Craft XML document' }); }
 
     let xml = xmlMatch[0];
     xml = xml.replace(/\{\{NAME\}\}/g, name).replace(/\{\{DESCRIPTION\}\}/g, description);
 
     const valid = XMLValidator.validate(xml);
+
+    addHistoryEntry({ role: 'ai', type: 'preview', text: xml });
+
     if (valid !== true) {
       return res.json({ xml, valid: false, errors: valid });
     }
 
     return res.json({ xml, valid: true });
   } catch (e) {
+    addHistoryEntry({ role: 'error', type: 'preview', text: 'AI preview failed: ' + e.message });
     return res.status(500).json({ error: 'AI preview failed', details: e.message });
   }
 });
+
+// Endpoint to fetch in-memory AI history
+app.get('/history', (req, res) => {
+  res.json({ history: aiHistory });
+});
+
+// Endpoint to fetch server logs (tail)
+app.get('/server-logs', (req, res) => {
+  const logPath = '/tmp/sr2-server.log';
+  if (!fs.existsSync(logPath)) return res.json({ logs: '' });
+  try {
+    const raw = fs.readFileSync(logPath, 'utf8');
+    const lines = raw.split('\n');
+    const last = lines.slice(-200).join('\n');
+    res.json({ logs: last });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read server logs' });
+  }
+});
+
 
 // Download uploaded template
 app.get('/download/:file', (req, res) => {
