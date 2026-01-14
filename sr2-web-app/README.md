@@ -12,7 +12,7 @@ How to run:
 
 Demo link (local): http://localhost:3000 — open in your browser while the server is running.
 
-Temporary public demo (tunnel): https://sr2craftgen-unik.loca.lt — available while the local tunnel session is active.
+Temporary public demo (tunnel): https://salty-heads-shake.loca.lt — available while the local tunnel session is active.
 
 Troubleshooting downloads:
 - If the browser does not automatically save the .craft file, try the **Preview AI** button and use **Download** from the preview modal (works better on mobile). If that still doesn't start, the preview modal can open the XML in a new tab where you can long-press (mobile) or right-click → Save as (desktop).
